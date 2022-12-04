@@ -331,4 +331,60 @@ def getsensordata(company_api_key, time1, time2, sensor_id):
             'message': 'Company not found.'
         })
 
+@app.route('/api/updatesensordata', methods=['PUT'])
+def updatesensordata():
+    data = request.get_json()
+    sensor_api_key = data['sensor_api_key']
+    sensor_data = data['sensor_data']
+    sensor_data_id = data['sensor_data_id']
+
+    sensor = Sensor.query.filter_by(sensor_api_key=sensor_api_key).first()
+    if sensor:
+        sensordata = SensorData.query.filter_by(sensor_data_id=sensor_data_id).first()
+        if sensordata:
+            sensordata.data = sensor_data
+            db.session.commit()
+            return jsonify({
+                'status': 'success',
+                'message': 'Sensor data updated successfully.'
+            })
+        else:
+            return jsonify({
+                'status': 'error',
+                'message': 'Sensor data not found.'
+            })
+    else:
+        return jsonify({
+            'status': 'error',
+            'message': 'Sensor not found.'
+        })
+
+@app.route('/api/deletesensordata', methods=['DELETE'])
+def deletesensordata():
+    data = request.get_json()
+    sensor_api_key = data['sensor_api_key']
+    sensor_data_id = data['sensor_data_id']
+
+    sensor = Sensor.query.filter_by(sensor_api_key=sensor_api_key).first()
+    if sensor:
+        sensordata = SensorData.query.filter_by(sensor_data_id=sensor_data_id).first()
+        if sensordata:
+            db.session.delete(sensordata)
+            db.session.commit()
+            return jsonify({
+                'status': 'success',
+                'message': 'Sensor data deleted successfully.'
+            })
+        else:
+            return jsonify({
+                'status': 'error',
+                'message': 'Sensor data not found.'
+            })
+    else:
+        return jsonify({
+            'status': 'error',
+            'message': 'Sensor not found.'
+        })
+
+        
 app.run()
