@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from Models import Admin, Company, Location, Sensor, SensorData, db
 from init import create_app
-
+import time
 
 app= create_app()
 
@@ -104,59 +104,71 @@ def addsensor():
             'token': sensor.generate_token()
         })
 
-#create app.route with method get to get all locations from a company by company_api_key
-@app.route('/api/getlocations', methods=['GET'])
-def getlocations():
-    data = request.get_json()
-    company_api_key = data['company_api_key']
+@app.route('/api/getlocations/<company_api_key>', methods=['GET'])
+def getlocations(company_api_key):
+    company = Company.query.filter_by(company_api_key=company_api_key).first()
+    if company:
+        locations = Location.query.filter_by(company_id=company.ID).all()
+        return jsonify({
+            'status': 'success',
+            'locations': [location.to_json() for location in locations]
+        })
+    else:
+        return jsonify({
+            'status': 'fail',
+            'message': 'Company not found.'
+        })
 
-    locations = Location.query.filter_by(company_api_key=company_api_key).all()
-    return jsonify({
-        'status': 'success',
-        'locations': [location.to_json() for location in locations]
-    })
+@app.route('/api/getlocation/<company_api_key>/<location_id>', methods=['GET'])
+def getlocation(company_api_key, location_id):
+    company = Company.query.filter_by(company_api_key=company_api_key).first()
+    print(company_api_key, location_id)
+    if company:
+        location = Location.query.filter_by(ID=location_id).first()
+        return jsonify({
+            'status': 'success',
+            'location': location.to_json()
+        })
+    else:
+        return jsonify({
+            'status': 'fail',
+            'message': 'Company not found.'
+        })
 
-#create app.route with method get to get one location from a company by company_api_key and location_name
-@app.route('/api/getlocation', methods=['GET'])
-def getlocation():
-    data = request.get_json()
-    company_api_key = data['company_api_key']
-    location_name = data['location_name']
 
-    location = Location.query.filter_by(company_api_key=company_api_key, location_name=location_name).first()
-    return jsonify({
-        'status': 'success',
-        'location': location.to_json()
-    })
 
-#create app.route with method get to get all sensors from a location by location_id and company_api_key
-@app.route('/api/getsensors', methods=['GET'])
-def getsensors():
-    data = request.get_json()
-    location_id = data['location_id']
-    company_api_key = data['company_api_key']
+@app.route('/api/getsensors/<company_api_key>/<location_id>', methods=['GET'])
+def getsensors(company_api_key, location_id):
+    company = Company.query.filter_by(company_api_key=company_api_key).first()
+    if company:
+        sensors = Sensor.query.filter_by(location_id=location_id).all()
+        return jsonify({
+            'status': 'success',
+            'sensors': [sensor.to_json() for sensor in sensors]
+        })
+    else:
+        return jsonify({
+            'status': 'fail',
+            'message': 'Company not found.'
+        })
 
-    sensors = Sensor.query.filter_by(location_id=location_id, company_api_key=company_api_key).all()
-    return jsonify({
-        'status': 'success',
-        'sensors': [sensor.to_json() for sensor in sensors]
-    })
 
-#create app.route with method get to get one sensor from a location by location_id and company_api_key and sensor_name
-@app.route('/api/getsensor', methods=['GET'])
-def getsensor():
-    data = request.get_json()
-    location_id = data['location_id']
-    company_api_key = data['company_api_key']
-    sensor_name = data['sensor_name']
+@app.route('/api/getsensor/<company_api_key>/<sensor_id>', methods=['GET'])
+def getsensor(company_api_key, sensor_id):
+    company = Company.query.filter_by(company_api_key=company_api_key).first()
+    if company:
+        sensor = Sensor.query.filter_by(sensor_id=sensor_id).first()
+        return jsonify({
+            'status': 'success',
+            'sensor': sensor.to_json()
+        })
+    else:
+        return jsonify({
+            'status': 'fail',
+            'message': 'Company not found.'
+        })
 
-    sensor = Sensor.query.filter_by(location_id=location_id, company_api_key=company_api_key, sensor_name=sensor_name).first()
-    return jsonify({
-        'status': 'success',
-        'sensor': sensor.to_json()
-    })
 
-#create app.route with method put to update or insert a location by location_id and company_api_key
 @app.route('/api/updatelocation', methods=['PUT'])
 def updatelocation():
     data = request.get_json()
@@ -167,26 +179,30 @@ def updatelocation():
     location_city = data['location_city']
     location_meta = data['location_meta']
 
-    location = Location.query.filter_by(location_id=location_id, company_api_key=company_api_key).first()
-    if location:
-        location.location_name = location_name
-        location.location_country = location_country
-        location.location_city = location_city
-        location.location_meta = location_meta
-        db.session.commit()
-        return jsonify({
-            'status': 'success',
-            'message': 'Location updated successfully.'
-        })
+    company = Company.query.filter_by(company_api_key=company_api_key).first()
+    if company:
+        location = Location.query.filter_by(ID=location_id).first()
+        if location:
+            location.location_name = location_name
+            location.location_country = location_country
+            location.location_city = location_city
+            location.location_meta = location_meta
+            db.session.commit()
+            return jsonify({
+                'status': 'success',
+                'message': 'Location updated successfully.'
+            })
+        else:
+            return jsonify({
+                'status': 'fail',
+                'message': 'Location not found.'
+            })
     else:
-        location = Location(location_id=location_id, company_api_key=company_api_key, location_name=location_name, location_country=location_country, location_city=location_city, location_meta=location_meta)
-        location.save()
         return jsonify({
-            'status': 'success',
-            'message': 'Location inserted successfully.'
+            'status': 'fail',
+            'message': 'Company not found.'
         })
 
-#create app.route with method put to update or insert a sensor by sensor_id and company_api_key
 @app.route('/api/updatesensor', methods=['PUT'])
 def updatesensor():
     data = request.get_json()
@@ -197,68 +213,79 @@ def updatesensor():
     sensor_meta = data['sensor_meta']
     sensor_api_key = data['sensor_api_key']
 
-    sensor = Sensor.query.filter_by(sensor_id=sensor_id, company_api_key=company_api_key).first()
-    if sensor:
-        sensor.sensor_name = sensor_name
-        sensor.sensor_category = sensor_category
-        sensor.sensor_meta = sensor_meta
-        sensor.sensor_api_key = sensor_api_key
-        db.session.commit()
-        return jsonify({
-            'status': 'success',
-            'message': 'Sensor updated successfully.'
-        })
+    company = Company.query.filter_by(company_api_key=company_api_key).first()
+    if company:
+        sensor = Sensor.query.filter_by(sensor_id=sensor_id).first()
+        if sensor:
+            sensor.sensor_name = sensor_name
+            sensor.sensor_category = sensor_category
+            sensor.sensor_meta = sensor_meta
+            sensor.sensor_api_key = sensor_api_key
+            db.session.commit()
+            return jsonify({
+                'status': 'success',
+                'message': 'Sensor updated successfully.'
+            })
+        else:
+            return jsonify({
+                'status': 'fail',
+                'message': 'Sensor not found.'
+            })
     else:
-        sensor = Sensor(sensor_id=sensor_id, company_api_key=company_api_key, sensor_name=sensor_name, sensor_category=sensor_category, sensor_meta=sensor_meta, sensor_api_key=sensor_api_key)
-        sensor.save()
         return jsonify({
-            'status': 'success',
-            'message': 'Sensor inserted successfully.'
+            'status': 'fail',
+            'message': 'Company not found.'
         })
 
-#create app.route with method delete to delete a location by location_id and company_api_key
 @app.route('/api/deletelocation', methods=['DELETE'])
 def deletelocation():
     data = request.get_json()
     location_id = data['location_id']
     company_api_key = data['company_api_key']
 
-    location = Location.query.filter_by(location_id=location_id, company_api_key=company_api_key).first()
-    if location:
-        db.session.delete(location)
-        db.session.commit()
-        return jsonify({
-            'status': 'success',
-            'message': 'Location deleted successfully.'
-        })
+    company = Company.query.filter_by(company_api_key=company_api_key).first()
+    if company:
+        location = Location.query.filter_by(ID=location_id).first()
+        if location:
+            db.session.delete(location)
+            db.session.commit()
+            return jsonify({
+                'status': 'success',
+                'message': 'Location deleted successfully.'
+            })
+        else:
+            return jsonify({
+                'status': 'error',
+                'message': 'Location not found.'
+            })
     else:
         return jsonify({
             'status': 'error',
-            'message': 'Location not found.'
+            'message': 'Company not found.'
         })
 
-#create app.route with method delete to delete a sensor by sensor_id and company_api_key
 @app.route('/api/deletesensor', methods=['DELETE'])
 def deletesensor():
     data = request.get_json()
     sensor_id = data['sensor_id']
     company_api_key = data['company_api_key']
 
-    sensor = Sensor.query.filter_by(sensor_id=sensor_id, company_api_key=company_api_key).first()
-    if sensor:
-        db.session.delete(sensor)
-        db.session.commit()
-        return jsonify({
-            'status': 'success',
-            'message': 'Sensor deleted successfully.'
-        })
-    else:
-        return jsonify({
-            'status': 'error',
-            'message': 'Sensor not found.'
-        })
+    company = Company.query.filter_by(company_api_key=company_api_key).first()
+    if company:
+        sensor = Sensor.query.filter_by(sensor_id=sensor_id).first()
+        if sensor:
+            db.session.delete(sensor)
+            db.session.commit()
+            return jsonify({
+                'status': 'success',
+                'message': 'Sensor deleted successfully.'
+            })
+        else:
+            return jsonify({
+                'status': 'error',
+                'message': 'Sensor not found.'
+            })
 
-#create app.route with method post to insert a sensor data by sensor_api_key
 @app.route('/api/sensordata', methods=['POST'])
 def sensordata():
     data = request.get_json()
@@ -267,7 +294,9 @@ def sensordata():
 
     sensor = Sensor.query.filter_by(sensor_api_key=sensor_api_key).first()
     if sensor:
-        sensor_data = SensorData(sensor_id=sensor.sensor_id, sensor_data=sensor_data)
+        date=time.time()
+        date= int(date)
+        sensor_data = SensorData(sensor_id=sensor.sensor_id, data=sensor_data, date=date)
         sensor_data.save()
         return jsonify({
             'status': 'success',
@@ -279,6 +308,27 @@ def sensordata():
             'message': 'Sensor not found.'
         })
 
+@app.route('/api/getsensordata/<company_api_key>/from/<time1>/to/<time2>/<sensor_id>/', methods=['GET'])
+def getsensordata(company_api_key, time1, time2, sensor_id):
+    company = Company.query.filter_by(company_api_key=company_api_key).first()
+    if company:
+        data=[]
+        for sensor in sensor_id.split(','):
+            sensor = Sensor.query.filter_by(sensor_id=sensor).first()
+            if sensor:
+                sensordata = SensorData.query.filter_by(sensor_id=sensor.sensor_id).all()
+                for i in sensordata:
+                    if i.date>=int(time1) and i.date<=int(time2):
+                        data.append(i.to_json())
+        return jsonify({
+            'status': 'success',
+            'data': data
+        })
 
+    else:
+        return jsonify({
+            'status': 'error',
+            'message': 'Company not found.'
+        })
 
 app.run()

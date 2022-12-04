@@ -54,6 +54,15 @@ class Location(db.Model):
         db.session.commit()
     def generate_token(self):
         pass
+    def to_json(self):
+        return {
+            "id": self.ID,
+            "company_id": self.company_id,
+            "location_name": self.location_name,
+            "location_country": self.location_country,
+            "location_city": self.location_city,
+            "location_meta": self.location_meta
+        }
 
 
 class Sensor(db.Model):
@@ -76,6 +85,15 @@ class Sensor(db.Model):
         db.session.commit()
     def generate_token(self):
         pass
+    def to_json(self):
+        return {
+            "sensor_id": self.sensor_id,
+            "location_id": self.location_id,
+            "sensor_name": self.sensor_name,
+            "sensor_category": self.sensor_category,
+            "sensor_meta": self.sensor_meta,
+            "sensor_api_key": self.sensor_api_key
+        }
 
 
 class SensorData(db.Model):
@@ -83,6 +101,7 @@ class SensorData(db.Model):
     sensor_data_id= db.Column(db.Integer, primary_key=True, unique=True, nullable=False)
     sensor_id= db.Column(db.Integer, db.ForeignKey('Sensor.sensor_id'), nullable=False)
     data= db.Column(db.String(200))
+    date= db.Column(db.Integer, nullable=False)
     def __repr__(self):
         return '<SensorData %r>' % self.nombre
     def save(self):
@@ -94,4 +113,15 @@ class SensorData(db.Model):
     def update(self):
         db.session.commit()
     def generate_token(self):
-        pass    
+        pass
+    def to_json(self):
+        return {
+            "sensor_data_id": self.sensor_data_id,
+            "sensor_id": self.sensor_id,
+            "data": self.data
+        }
+    #timestamp between 2 dates in epoch time    
+    def timestamp_between(self, start, end):
+        if self.date >= start and self.date <= end:
+            return True
+        
